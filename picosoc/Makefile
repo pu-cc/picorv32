@@ -94,6 +94,45 @@ icebreaker_fw.hex: icebreaker_fw.elf
 icebreaker_fw.bin: icebreaker_fw.elf
 	$(CROSS)objcopy -O binary icebreaker_fw.elf icebreaker_fw.bin
 
+# ---- GateMate Evaluation Board ----
+
+gatematesim: gatemate_tb.vvp gatemate_fw.hex
+	vvp -N $< +firmware=gatemate_fw.hex
+
+gatematesynsim: gatemate_syn_tb.vvp gatemate_fw.hex
+	vvp -N $< +firmware=gatemate_fw.hex
+
+gatemate_synth.v: gatemate.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
+	yosys -ql gatemate_synth.log -p 'synth_gatemate -top gatemate -nomx8 -vlog gatemate_synth.v' $^
+
+gatemate_tb.vvp: gatemate_tb.v gatemate.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v
+	iverilog -s testbench -o $@ $^ `yosys-config --datdir/gatemate/cells_sim.v`
+
+gatemate_syn_tb.vvp: gatemate_tb.v gatemate_synth.v spiflash.v
+	iverilog -s testbench -o $@ $^ `yosys-config --datdir/gatemate/cells_sim.v`
+
+gatemate_00.cfg.bit: gatemate.ccf gatemate_synth.v
+	$(CC_TOOL)/p_r -i gatemate_synth.v -o gatemate -ccf gatemate.ccf +uCIO -cCP > gatemate_impl.log
+
+gatemateflash: gatemate_00.cfg.bit gatemate_fw.bin
+	openFPGALoader -b gatemate_evb_spi -f gatemate_00.cfg.bit
+	openFPGALoader -b gatemate_evb_spi -f -o 1048576 gatemate_fw.bin
+
+gatemateflash_fw: gatemate_fw.bin
+	openFPGALoader -b gatemate_evb_spi -f -o 1048576 gatemate_fw.bin
+
+gatemate_sections.lds: sections.lds
+	$(CROSS)cpp -P -DGATEMATE -o $@ $^
+
+gatemate_fw.elf: gatemate_sections.lds start.s firmware.c
+	$(CROSS)gcc $(CFLAGS) -DGATEMATE -mabi=ilp32 -march=rv32ic -Wl,-Bstatic,-T,gatemate_sections.lds,--strip-debug -ffreestanding -nostdlib -o gatemate_fw.elf start.s firmware.c
+
+gatemate_fw.hex: gatemate_fw.elf
+	$(CROSS)objcopy -O verilog gatemate_fw.elf gatemate_fw.hex
+
+gatemate_fw.bin: gatemate_fw.elf
+	$(CROSS)objcopy -O binary gatemate_fw.elf gatemate_fw.bin
+
 # ---- Testbench for SPI Flash Model ----
 
 spiflash_tb: spiflash_tb.vvp icebreaker_fw.hex
@@ -117,7 +156,9 @@ clean:
 	rm -f hx8kdemo_syn.v hx8kdemo_syn_tb.vvp hx8kdemo_tb.vvp
 	rm -f icebreaker.json icebreaker.log icebreaker.asc icebreaker.rpt icebreaker.bin
 	rm -f icebreaker_syn.v icebreaker_syn_tb.vvp icebreaker_tb.vvp
+	rm -f *.prn *.used *.pin *.place *.cdf *.id *.pos *.pathes *.ref* *.sdf *.cfg* *.net gatemate_synth.log gatemate_impl.log *_00.v gatemate_synth.v lut*.txt
 
 .PHONY: spiflash_tb clean
 .PHONY: hx8kprog hx8kprog_fw hx8ksim hx8ksynsim
 .PHONY: icebprog icebprog_fw icebsim icebsynsim
+.PHONY: gatemateflash gatemateflash_fw gatematesim gatematesynsim

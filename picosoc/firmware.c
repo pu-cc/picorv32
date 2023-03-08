@@ -22,10 +22,15 @@
 
 #ifdef ICEBREAKER
 #  define MEM_TOTAL 0x20000 /* 128 KB */
+#  define CPU_FREQ  12000000
 #elif HX8KDEMO
 #  define MEM_TOTAL 0x200 /* 2 KB */
+#  define CPU_FREQ  12000000
+#elif GATEMATE
+#  define MEM_TOTAL 0x800
+#  define CPU_FREQ  10000000
 #else
-#  error "Set -DICEBREAKER or -DHX8KDEMO when compiling firmware.c"
+#  error "Set -DICEBREAKER or -DHX8KDEMO or -DGATEMATE when compiling firmware.c"
 #endif
 
 // a pointer to this is a null pointer, but the compiler does not
@@ -110,7 +115,7 @@ void set_flash_mode_qddr()
 }
 #endif
 
-#ifdef ICEBREAKER
+#if defined(ICEBREAKER) || defined(GATEMATE)
 void set_flash_qspi_flag()
 {
 	uint8_t buffer[8];
@@ -386,7 +391,7 @@ void cmd_read_flash_regs()
 }
 #endif
 
-#ifdef ICEBREAKER
+#if defined(ICEBREAKER) || defined(GATEMATE)
 uint8_t cmd_read_flash_reg(uint8_t cmd)
 {
 	uint8_t buffer[2] = {cmd, 0};
@@ -610,7 +615,7 @@ void cmd_benchmark_all()
 }
 #endif
 
-#ifdef ICEBREAKER
+#if defined(ICEBREAKER) || defined(GATEMATE)
 void cmd_benchmark_all()
 {
 	uint32_t instns = 0;
@@ -666,7 +671,7 @@ void cmd_echo()
 void main()
 {
 	reg_leds = 31;
-	reg_uart_clkdiv = 104;
+	reg_uart_clkdiv = 87; // 104; (CPU_FREQ / 115200);
 	print("Booting..\n");
 
 	reg_leds = 63;
@@ -683,6 +688,9 @@ void main()
 	print(" |_|   |_|\\___\\___/____/ \\___/ \\____|\n");
 	print("\n");
 
+	print("Core frequency: ");
+	print_dec(CPU_FREQ / 1000000);
+	print(" MHz\n");
 	print("Total memory: ");
 	print_dec(MEM_TOTAL / 1024);
 	print(" KiB\n");

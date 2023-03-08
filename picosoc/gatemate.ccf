@@ -1,0 +1,26 @@
+# picosoc pin file
+
+## 10 MHz clock
+Pin_in     "clk"        Loc = "IO_SB_A8" | SCHMITT_TRIGGER=true;
+
+## UART
+Pin_out    "ser_tx"     Loc = "IO_NB_B5"; # Pmod B: IO D4
+Pin_in     "ser_rx"     Loc = "IO_NB_B6"; # Pmod B: IO D5
+
+## Serial flash (use +uCIO to enable bank)
+Pin_out    "flash_csb"  Loc = "IO_WA_A8";
+Pin_out    "flash_clk"  Loc = "IO_WA_B8";
+Pin_inout  "flash_io0"  Loc = "IO_WA_B7";
+Pin_inout  "flash_io1"  Loc = "IO_WA_A7";
+Pin_inout  "flash_io2"  Loc = "IO_WA_B6";
+Pin_inout  "flash_io3"  Loc = "IO_WA_A6";
+
+## GPIO
+Pin_out    "led[0]"     Loc = "IO_EB_B1";
+Pin_out    "led[1]"     Loc = "IO_EB_B2";
+Pin_out    "led[2]"     Loc = "IO_EB_B3";
+Pin_out    "led[3]"     Loc = "IO_EB_B4";
+Pin_out    "led[4]"     Loc = "IO_EB_B5";
+Pin_out    "led[5]"     Loc = "IO_EB_B6";
+Pin_out    "led[6]"     Loc = "IO_EB_B7";
+Pin_out    "led[7]"     Loc = "IO_EB_B8";
