@@ -102,20 +102,26 @@ gatematesim: gatemate_tb.vvp gatemate_fw.hex
 gatematesynsim: gatemate_syn_tb.vvp gatemate_fw.hex
 	vvp -N $< +firmware=gatemate_fw.hex
 
-gatemate_synth.v: gatemate.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
-	yosys -ql gatemate_synth.log -p 'synth_gatemate -top gatemate -nomx8 -vlog gatemate_synth.v' $^
+gatemate.json: gatemate.v spimemio.v simpleuart.v picosoc.v ../picorv32.v
+	yosys -ql gatemate.log -p 'synth_gatemate -top gatemate -nomx8 -nomult -luttree -json gatemate.json' $^
 
 gatemate_tb.vvp: gatemate_tb.v gatemate.v spimemio.v simpleuart.v picosoc.v ../picorv32.v spiflash.v
 	iverilog -s testbench -o $@ $^ `yosys-config --datdir/gatemate/cells_sim.v`
 
-gatemate_syn_tb.vvp: gatemate_tb.v gatemate_synth.v spiflash.v
+gatemate_syn_tb.vvp: gatemate_tb.v gatemate_syn.v spiflash.v
 	iverilog -s testbench -o $@ $^ `yosys-config --datdir/gatemate/cells_sim.v`
 
-gatemate_00.cfg.bit: gatemate.ccf gatemate_synth.v
-	$(CC_TOOL)/p_r -i gatemate_synth.v -o gatemate -ccf gatemate.ccf +uCIO -cCP > gatemate_impl.log
+gatemate_syn.v: gatemate.json
+	yosys -p 'read_json gatemate.json; write_verilog gatemate_syn.v'
 
-gatemateflash: gatemate_00.cfg.bit gatemate_fw.bin
-	openFPGALoader -b gatemate_evb_spi -f gatemate_00.cfg.bit
+gatemate.txt: gatemate.ccf gatemate.json
+	nextpnr-himbaechel --device=CCGM1A1 --json gatemate.json --vopt ccf=gatemate.ccf --vopt out=gatemate.txt --router router2
+
+gatemate.bit: gatemate.txt
+	gmpack gatemate.txt gatemate.bit
+
+gatemateflash: gatemate.bit gatemate_fw.bin
+	openFPGALoader -b gatemate_evb_spi -f gatemate.bit
 	openFPGALoader -b gatemate_evb_spi -f -o 1048576 gatemate_fw.bin
 
 gatemateflash_fw: gatemate_fw.bin
